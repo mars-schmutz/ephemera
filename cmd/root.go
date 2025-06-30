@@ -54,7 +54,7 @@ func DoEphemera(cmd *cobra.Command, args []string) {
 	}
 
 	// TODO: Fix no flags given
-	// Does it create empty temp shell or error out?
+	// Should it create empty temp shell or error out?
 	if archivePath == "" && repoPath == "" {
 		fmt.Println("You didn't supply a flag.")
 		fmt.Println()
@@ -69,7 +69,11 @@ func DoEphemera(cmd *cobra.Command, args []string) {
 	defer os.RemoveAll(temp)
 
 	if repoPath != "" {
-		cloneRepo(temp, repoPath)
+		err := cloneRepo(temp, repoPath)
+		if err != nil {
+			os.RemoveAll(temp)
+			os.Exit(1)
+		}
 	}
 
 	if archivePath != "" {
@@ -91,12 +95,15 @@ func DoEphemera(cmd *cobra.Command, args []string) {
 	fmt.Println("Exited shell. Cleaning up...")
 }
 
-func cloneRepo(dir, repo string) {
+func cloneRepo(dir, repo string) error {
 	clone := exec.Command("git", "clone", repo, dir)
 	clone.Stderr = os.Stderr
 	clone.Stdout = os.Stdout
 
 	if err := clone.Run(); err != nil {
-		log.Fatal("Clone failed: ", err)
+		fmt.Printf("Clone failed: %s\n", err)
+		return err
 	}
+
+	return nil
 }

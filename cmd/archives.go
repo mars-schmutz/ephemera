@@ -8,8 +8,8 @@ import (
 	"io"
 	"log"
 	"os"
-	"strings"
 	"path/filepath"
+	"strings"
 
 	"github.com/gabriel-vasile/mimetype"
 )
@@ -25,7 +25,6 @@ func Unarchive(dir, archive string) {
 	case "application/gzip":
 		extractTarGz(dir, archive)
 	case "application/zip":
-		log.Fatal("It is a .zip file")
 		extractZip(dir, archive)
 	default:
 		fmt.Printf("Type: %s\n", mtype.String())
@@ -93,10 +92,36 @@ func extractZip(dir, archive string) {
 	defer r.Close()
 
 	for _, f := range r.File {
-		fmt.Printf("Contents of %s\n", f.Name)
-		rc, err := f.Open()
+		destPath := filepath.Join(dir, f.Name)
+
+		if !strings.HasPrefix(destPath, filepath.Clean(dir)+string(os.PathSeparator)) {
+			fmt.Println("Invalid file path")
+			return
+		}
+
+		if f.FileInfo().IsDir() {
+			os.Mkdir(destPath, os.ModePerm)
+			continue
+		}
+
+		if err := os.MkdirAll(filepath.Dir(destPath), os.ModePerm); err != nil {
+			panic(err)
+		}
+
+		destFile, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, f.Mode())
 		if err != nil {
-			log.Fatal(err)
+			panic(err)
+		}
+		defer destFile.Close()
+
+		fileInArchive, err := f.Open()
+		if err != nil {
+			panic(err)
+		}
+		defer fileInArchive.Close()
+
+		if _, err := io.Copy(destFile, fileInArchive); err != nil {
+			panic(err)
 		}
 	}
 }
