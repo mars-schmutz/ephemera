@@ -19,7 +19,6 @@ func Unarchive(dir, archive string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(mtype.String(), mtype.Extension())
 
 	switch mtype.String() {
 	case "application/gzip":
